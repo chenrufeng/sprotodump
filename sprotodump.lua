@@ -1,7 +1,7 @@
 local parse_core = require "core"
 local parse_param = require "param"
 local util = require "util"
-
+local dumptable = require "dumptable"
 ------------------------------- readme -------------------------------------
 local README = [[
 sprotodump is a simple tool to convert sproto file to spb binary.
@@ -32,9 +32,10 @@ local module = {
   ["-md"] = require "module.md",
 }
 
-
+print(...)
 ------------------------------- param -------------------------------------
 local param = parse_param(...)
+dumptable.vd(param)
 if not param or not module[param.dump_type] then
   print(README)
   return
@@ -51,6 +52,10 @@ local function _gen_trunk_list(sproto_file, namespace)
 end
 
 local m = module[param.dump_type]
+dumptable.vd(param)
 local trunk_list = _gen_trunk_list(param.sproto_file, param.namespace)
+dumptable.vd(trunk_list)
+print (type(trunk_list[1][1]), "[[[", trunk_list[1][1], "]]]")
+print ("====================================================")
 local trunk, build = parse_core.gen_trunk(trunk_list)
 m(trunk, build, param)

@@ -1,16 +1,52 @@
 local lpeg = require "lpeg"
 local table = require "table"
+local dumptable = require "dumptable"
 
-local P = lpeg.P
-local S = lpeg.S
-local R = lpeg.R
-local C = lpeg.C
-local Ct = lpeg.Ct
-local Cg = lpeg.Cg
-local Cc = lpeg.Cc
-local V = lpeg.V
-local Cmt = lpeg.Cmt
-local Carg = lpeg.Carg
+local P = lpeg.P    --lpeg.P(string) 	Matches string literally;lpeg.P(n) 	Matches exactly n characters
+local S = lpeg.S    --lpeg.S(string) 	Matches any character in string (Set)
+local R = lpeg.R    --lpeg.R("xy") 	Matches any character between x and y (Range)
+local C = lpeg.C    --lpeg.C(patt) 	the match for patt plus all captures made by patt
+local Ct = lpeg.Ct  --lpeg.Ct(patt) 	a table with all captures from patt
+local Cg = lpeg.Cg  --lpeg.Cg(patt [, name]) 	the values produced by patt, optionally tagged with name
+local Cc = lpeg.Cc  --lpeg.Cc(values) 	the given values (matches the empty string)
+local V = lpeg.V    --lpeg.V (v) This operation creates a non-terminal (a variable) for a grammar. The created non-terminal refers to the rule indexed by v in the enclosing grammar
+local Cmt = lpeg.Cmt --lpeg.Cmt(patt, function) 	the returns of function applied to the captures of patt; the application is done at match time
+local Carg = lpeg.Carg --lpeg.Carg(n) 	the value of the nth extra argument to lpeg.match (matches the empty string)
+
+local function test_lpeg()
+    --[[-
+    OneProto = {protoname,fields_list, prototype='type', meta = {} }
+    fields_list = {field1,...}
+    field = {field_name, tag, data_type, type='filed', meta = {}}
+    -]]
+
+    --[[
+        table ={field1,...}
+        field = {meta={}, typename="", name="", array="true", tag=3, key=id}
+    ]]
+    local digit = R'09' -- anything from '0' to '9'
+    local digits = digit^1 -- a sequence of at least one digit
+    local cdigits= C(digits)  -- capture digits
+    print(lpeg.match(cdigits, '123'))
+
+
+    local int = S'+-'^-1 * digits
+    print( lpeg.match(C(int),'+23'))
+    print( lpeg.match(int/tonumber,'+123') + 1)
+
+    print( lpeg.match(C(P'a'^1) * C(P'b'^1), 'aabbbb'))
+
+
+    print (" ================================")
+    print (lpeg.match (Carg(1), 'a', 1, print))
+    -- Carg, lpeg.match empty string ,returns args
+    print(lpeg.match(Carg(1) * Carg(2), '', 1, 10, 20))
+    print(lpeg.match((P"\n" + "\r\n") * Carg(1), '', 1, "aaaaaa"))
+    print(lpeg.match((P"\n" + "\r\n") * Carg(1), '\n', 1, "aaaaaa"))
+    -- put the result of capture to  function.
+    lpeg.match(lpeg.Cmt(C(P"ab") * Carg(1), function (s, i, a, b) print(s,i,a,b) end), "abccccc", 1, "vvvvvvv")
+end
+test_lpeg()
 
 local function count_lines(_,pos, parser_state)
 	if parser_state.pos < pos then
@@ -279,6 +315,7 @@ end
 
 
 local function parser(text, filename, namespace, build)
+    print("===============parser(text, filename, namespace, build)=====")
 	local ex = namespace and namespace.."." or ""
 	local state = { file = filename, pos = 0, line = 1}
 	local r = lpeg.match(proto * -1 + exception , text , 1, state)
@@ -288,7 +325,7 @@ local function parser(text, filename, namespace, build)
 		local name = v[1]
 		v[1] = ex..name
 	end
-
+    dumptable.vd (r)
 	return adjust(r, build, namespace)
 end
 
@@ -301,6 +338,8 @@ end
 	}
 ]]
 local function gen_trunk(trunk_list)
+    print("===============gen_trunk(trunk_list)====================")
+    dumptable.vd(trunk_list)
 	local ret = {}
 	local build = {protocol={}, type={}}
 	for i,v in ipairs(trunk_list) do
@@ -308,6 +347,8 @@ local function gen_trunk(trunk_list)
 		local name = v[2] or "=text"
 		local namespace = v[3]
 		local ast = parser(text, name, namespace, build)
+        print("===============gen_trunk(trunk_list) ast================")
+        dumptable.vd(ast)
 		local protocol = ast.protocol
 		local type = ast.type
 		ast.info = {
